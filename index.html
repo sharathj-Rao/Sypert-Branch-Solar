@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Field Polygon Tracker</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>AIzaSyChMqsXpBm1DRafykmwl1Ouv7oOVnLNdUM
+
+  <style>
+    body {margin:0; font-family:Arial;}
+    #map {height:100vh;}
+    #login, #form {position:absolute; top:10px; left:10px; background:white; padding:15px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.3); z-index:100;}
+    #form {display:none;}
+    input, button, select {margin:5px 0; width:180px;}
+  </style>
+</head>
+<body>
+  <div id="login">
+    <h3>Login</h3>
+    Username: <input id="username" type="text"><br>
+    <button onclick="login()">Enter Map</button>
+  </div>
+
+  <div id="form">
+    <h3>Update Polygon</h3>
+    Status: <select id="status">
+      <option>Pending</option>
+      <option>In Progress</option>
+      <option>Complete</option>
+    </select><br>
+    Notes: <input id="notes" type="text"><br>
+    <button onclick="sendUpdate()">Save</button>
+  </div>
+
+  <div id="map"></div>
+
+  <script>
+    let map, currentPoly, currentId, user = "";
+    const WEB_APP_URL = "https://script.google.com/a/macros/sensehawk.com/s/AKfycbw50AXD7u2z7F6tJqrjccBgxKqbNb4MPRolCClkVVHdZr5iO7cpH0pU_PS33cFrfhSrRw/exec";
+    const API_KEY = "AIzaSyChMqsXpBm1DRafykmwl1Ouv7oOVnLNdUM";
+ // already in script src
+
+    // Remove the old polygonsData array and loop
+
+// Add this instead (after map is created in initMap())
+map.data.loadGeoJson('https://github.com/sharathj-Rao/Sypert-Branch-Solar/blob/main/Blk_name.geojson');  // e.g. 'https://example.com/polygons.geojson'
+
+// Optional: Style polygons + make clickable
+map.data.setStyle(function(feature) {
+  return {
+    fillColor: '#FF9800',  // default orange (Pending)
+    strokeWeight: 2,
+    fillOpacity: 0.4
+  };
+});
+
+// Click handler for any polygon
+map.data.addListener('click', function(event) {
+  const feature = event.feature;
+  currentId = feature.getId() || feature.getProperty('id') || 'unknown';  // must have 'id' property in GeoJSON
+  currentPoly = feature;  // for style update
+  document.getElementById('form').style.display = 'block';
+});
+    function login() {
+      user = document.getElementById("username").value.trim();
+      if (user) {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("form").style.display = "block";
+        initMap();
+      }
+    }
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: {lat: 12.97, lng: 77.59},
+        zoom: 13
+      });
+
+      polygonsData.forEach(p => {
+        const poly = new google.maps.Polygon({
+          paths: p.paths,
+          strokeColor: p.color,
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: p.color,
+          fillOpacity: 0.4,
+          editable: false // only status, not shape
+        });
+        poly.setMap(map);
+        poly.id = p.id;
+
+        poly.addListener("click", () => {
+          currentPoly = poly;
+          currentId = p.id;
+          document.getElementById("form").style.display = "block";
+        });
+      });
+    }
+
+    function sendUpdate() {
+      if (!currentId || !user) return;
+
+      const payload = {
+        id: currentId,
+        status: document.getElementById("status").value,
+        user: user,
+        notes: document.getElementById("notes").value
+      };
+
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: {"Content-Type": "application/json"},
+        mode: "no-cors"
+      });
+
+      // Visual feedback
+      currentPoly.setOptions({
+        fillColor: payload.status === "Complete" ? "#4CAF50" : 
+                   payload.status === "In Progress" ? "#FF9800" : "#F44336",
+        fillOpacity: 0.6
+      });
+
+      alert("Updated!");
+    }
+  </script>
+</body>
+</html>
